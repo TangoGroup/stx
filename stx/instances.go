@@ -2,7 +2,10 @@ package stx
 
 import (
 	"fmt"
+	"log"
 	"regexp"
+	"sync"
+	"time"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
@@ -16,6 +19,7 @@ type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
 
 // GetBuildInstances loads and parses cue files and returns a list of build instances
 func GetBuildInstances(args []string, pkg string) []*build.Instance {
+	start := time.Now()
 	const syntaxVersion = -1000 + 13
 
 	config := load.Config{
@@ -34,6 +38,7 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 	// load finds files based on args and passes those to build
 	// buildInstances is a list of build.Instances, each has been parsed
 	buildInstances := load.Instances(args, &config)
+	log.Printf("GetBuildInstances took %s\n", time.Since(start))
 	return buildInstances
 }
 
@@ -50,7 +55,7 @@ func Process(buildInstances []*build.Instance, exclude string, handler instanceH
 			fmt.Println(au.Red(excludeRegexpErr.Error()))
 		}
 	}
-
+	wg := new(sync.WaitGroup)
 	for _, buildInstance := range buildInstances {
 		if exclude != "" {
 			if excludeRegexp.MatchString(buildInstance.DisplayPath) {
@@ -63,16 +68,18 @@ func Process(buildInstances []*build.Instance, exclude string, handler instanceH
 		// contains relevant path/file information related to the stack
 		// here we cue.Build one at a time so we can maintain a 1:1:1:1 between
 		// build.Instance, cue.Instance, cue.Value, and Stack
-		cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
-		if cueInstance.Err != nil {
-			// parse errors will be exposed here
-			fmt.Println(cueInstance.Err, cueInstance.Err.Position())
-		} else {
-
-			cueValue := cueInstance.Value()
-
-			handler(buildInstance, cueInstance, cueValue)
-
-		}
+		wg.Add(1)
+		go func(buildInstance *build.Instance, handler instanceHandler) {
+			cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
+			if cueInstance.Err != nil {
+				// parse errors will be exposed here
+				fmt.Println(cueInstance.Err, cueInstance.Err.Position())
+			} else {
+				cueValue := cueInstance.Value()
+				handler(buildInstance, cueInstance, cueValue)
+			}
+			wg.Done()
+		}(buildInstance, handler)
 	}
+	wg.Wait()
 }
