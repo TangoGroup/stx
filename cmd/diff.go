@@ -26,8 +26,6 @@ var diffCmd = &cobra.Command{
 		stx.Process(buildInstances, flags.exclude, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
-				//fmt.Printf("%+v\n\n", top)
-
 				for stackName, stack := range stacks {
 					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
 
@@ -72,7 +70,6 @@ var diffCmd = &cobra.Command{
 							reportWriter.WriteReport(os.Stdout)
 						}
 					}
-
 				}
 			}
 		})
