@@ -3,6 +3,7 @@ package stx
 import (
 	"fmt"
 	"regexp"
+	"sync"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
@@ -12,7 +13,7 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-type instanceHandler func(chan<- string, *build.Instance, *cue.Instance, cue.Value)
+type instanceHandler func(*sync.WaitGroup, chan<- string, *build.Instance, *cue.Instance, cue.Value)
 
 // GetBuildInstances loads and parses cue files and returns a list of build instances
 func GetBuildInstances(args []string, pkg string) []*build.Instance {
@@ -39,12 +40,20 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 
 // Process iterates over instances applying the handler function for each
 func Process(buildInstances []*build.Instance, exclude string, handler instanceHandler) {
+
 	feedback := make(chan string)
+
 	au := aurora.NewAurora(true) // TODO move to logger
 
 	// pull strings off the feedback channel and print them
+	done := make(chan bool)
 	go func() {
-		for message := range feedback {
+		for {
+			message, next := <-feedback
+			if !next {
+				done <- true
+				return
+			}
 			fmt.Print(message)
 		}
 	}()
@@ -58,6 +67,8 @@ func Process(buildInstances []*build.Instance, exclude string, handler instanceH
 			feedback <- au.Red(excludeRegexpErr.Error()).String()
 		}
 	}
+
+	var wg sync.WaitGroup
 
 	for _, buildInstance := range buildInstances {
 		if exclude != "" {
@@ -76,7 +87,12 @@ func Process(buildInstances []*build.Instance, exclude string, handler instanceH
 			// parse errors will be exposed here
 			feedback <- au.Cyan(buildInstance.DisplayPath).String() + "\n" + cueInstance.Err.Error() + " " + cueInstance.Err.Position().String()
 		} else {
-			go handler(feedback, buildInstance, cueInstance, cueInstance.Value())
+			wg.Add(1)
+			go handler(&wg, feedback, buildInstance, cueInstance, cueInstance.Value())
 		}
 	}
+	wg.Wait()
+	close(feedback)
+
+	<-done
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/TangoGroup/stx/stx"
 
@@ -27,8 +28,8 @@ var printCmd = &cobra.Command{
 		}
 		totalErrors := 0
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags.exclude, func(feedback chan<- string, buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-
+		stx.Process(buildInstances, flags.exclude, func(wg *sync.WaitGroup, feedback chan<- string, buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+			defer wg.Done()
 			yml, ymlErr := yaml.Marshal(cueValue)
 
 			if ymlErr != nil {

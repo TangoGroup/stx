@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
@@ -28,14 +29,15 @@ var dplCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags.exclude, func(feedback chan<- string, buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags.exclude, func(wg *sync.WaitGroup, feedback chan<- string, buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+			defer wg.Done()
 			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
 				//fmt.Printf("%+v\n\n", top)
 
 				for stackName, stack := range stacks {
 
-					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
+					fileName := saveStackAsYml(feedback, stackName, stack, buildInstance, cueValue)
 					fmt.Printf("%s %s %s %s:%s\n", au.White("Deploying"), au.Magenta(stackName), au.White("⤏"), au.Green(stack.Profile), au.Cyan(stack.Region))
 					fmt.Print(au.Gray(11, "  Validating template..."))
 
