@@ -27,20 +27,18 @@ var printCmd = &cobra.Command{
 		}
 		totalErrors := 0
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags.exclude, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+		stx.Process(buildInstances, flags.exclude, func(feedback chan<- string, buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
 			yml, ymlErr := yaml.Marshal(cueValue)
 
 			if ymlErr != nil {
 				totalErrors++
 				if !printHideErrors {
-					fmt.Println(au.Cyan(buildInstance.DisplayPath))
-					fmt.Println(au.Red(ymlErr.Error()))
+					feedback <- fmt.Sprintf("%s\n%s\n", au.Cyan(buildInstance.DisplayPath), au.Red(ymlErr.Error()))
 				}
 			} else {
 				if !printOnlyErrors {
-					fmt.Println(au.Cyan(buildInstance.DisplayPath))
-					fmt.Printf("%s\n", string(yml))
+					feedback <- fmt.Sprintf("%s\n%s\n", au.Cyan(buildInstance.DisplayPath), string(yml))
 				}
 			}
 

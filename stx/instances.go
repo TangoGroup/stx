@@ -12,7 +12,7 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
+type instanceHandler func(chan<- string, *build.Instance, *cue.Instance, cue.Value)
 
 // GetBuildInstances loads and parses cue files and returns a list of build instances
 func GetBuildInstances(args []string, pkg string) []*build.Instance {
@@ -39,6 +39,15 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 
 // Process iterates over instances applying the handler function for each
 func Process(buildInstances []*build.Instance, exclude string, handler instanceHandler) {
+	feedback := make(chan string)
+	au := aurora.NewAurora(true) // TODO move to logger
+
+	// pull strings off the feedback channel and print them
+	go func() {
+		for message := range feedback {
+			fmt.Print(message)
+		}
+	}()
 
 	var excludeRegexp *regexp.Regexp
 	var excludeRegexpErr error
@@ -46,8 +55,7 @@ func Process(buildInstances []*build.Instance, exclude string, handler instanceH
 	if exclude != "" {
 		excludeRegexp, excludeRegexpErr = regexp.Compile(exclude)
 		if excludeRegexpErr != nil {
-			au := aurora.NewAurora(true) // TODO move to logger
-			fmt.Println(au.Red(excludeRegexpErr.Error()))
+			feedback <- au.Red(excludeRegexpErr.Error()).String()
 		}
 	}
 
@@ -66,13 +74,9 @@ func Process(buildInstances []*build.Instance, exclude string, handler instanceH
 		cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
 		if cueInstance.Err != nil {
 			// parse errors will be exposed here
-			fmt.Println(cueInstance.Err, cueInstance.Err.Position())
+			feedback <- au.Cyan(buildInstance.DisplayPath).String() + "\n" + cueInstance.Err.Error() + " " + cueInstance.Err.Position().String()
 		} else {
-
-			cueValue := cueInstance.Value()
-
-			handler(buildInstance, cueInstance, cueValue)
-
+			go handler(feedback, buildInstance, cueInstance, cueInstance.Value())
 		}
 	}
 }
