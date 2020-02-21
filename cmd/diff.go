@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sync"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
@@ -24,14 +23,14 @@ var diffCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
-		stx.Process(buildInstances, flags.exclude, func(wg *sync.WaitGroup, feedback chan<- string, buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
-			defer wg.Done()
+		stx.Process(buildInstances, flags.exclude, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
+
 			stacks := stx.GetStacks(cueValue)
 			if stacks != nil {
 				//fmt.Printf("%+v\n\n", top)
 
 				for stackName, stack := range stacks {
-					fileName := saveStackAsYml(feedback, stackName, stack, buildInstance, cueValue)
+					fileName := saveStackAsYml(stackName, stack, buildInstance, cueValue)
 
 					// get a session and cloudformation service client
 					session := stx.GetSession(stack.Profile)

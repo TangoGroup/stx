@@ -2,6 +2,7 @@ package stx
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"sync"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-type instanceHandler func(*sync.WaitGroup, chan<- string, *build.Instance, *cue.Instance, cue.Value)
+type instanceHandler func(*build.Instance, *cue.Instance, cue.Value)
 
 // GetBuildInstances loads and parses cue files and returns a list of build instances
 func GetBuildInstances(args []string, pkg string) []*build.Instance {
@@ -41,58 +42,56 @@ func GetBuildInstances(args []string, pkg string) []*build.Instance {
 // Process iterates over instances applying the handler function for each
 func Process(buildInstances []*build.Instance, exclude string, handler instanceHandler) {
 
-	feedback := make(chan string)
-
 	au := aurora.NewAurora(true) // TODO move to logger
-
-	// pull strings off the feedback channel and print them
-	done := make(chan bool)
-	go func() {
-		for {
-			message, next := <-feedback
-			if !next {
-				done <- true
-				return
-			}
-			fmt.Print(message)
-		}
-	}()
 
 	var excludeRegexp *regexp.Regexp
 	var excludeRegexpErr error
+	var wg sync.WaitGroup
+	var binsts []*build.Instance
 
 	if exclude != "" {
 		excludeRegexp, excludeRegexpErr = regexp.Compile(exclude)
 		if excludeRegexpErr != nil {
-			feedback <- au.Red(excludeRegexpErr.Error()).String()
+			fmt.Println(au.Red(excludeRegexpErr.Error()))
+			os.Exit(1)
 		}
 	}
 
-	var wg sync.WaitGroup
-
-	for _, buildInstance := range buildInstances {
-		if exclude != "" {
+	if excludeRegexp != nil {
+		// filter build instances
+		for _, buildInstance := range buildInstances {
 			if excludeRegexp.MatchString(buildInstance.DisplayPath) {
 				continue
 			}
+			binsts = append(binsts, buildInstance)
 		}
-		// A cue instance defines a single configuration based on a collection of underlying CUE files.
-		// cue.Build is designed to produce a single cue.Instance from n build.Instances
-		// doing so however, would loose the connection between a stack and the build instance that
-		// contains relevant path/file information related to the stack
-		// here we cue.Build one at a time so we can maintain a 1:1:1:1 between
-		// build.Instance, cue.Instance, cue.Value, and Stack
-		cueInstance := cue.Build([]*build.Instance{buildInstance})[0]
-		if cueInstance.Err != nil {
-			// parse errors will be exposed here
-			feedback <- au.Cyan(buildInstance.DisplayPath).String() + "\n" + cueInstance.Err.Error() + " " + cueInstance.Err.Position().String()
-		} else {
-			wg.Add(1)
-			go handler(&wg, feedback, buildInstance, cueInstance, cueInstance.Value())
-		}
+	} else {
+		binsts = buildInstances
 	}
-	wg.Wait()
-	close(feedback)
 
-	<-done
+	cueInstances := cue.Build(binsts)
+
+	for i := 0; i < len(binsts); i++ {
+		wg.Add(1)
+		go func(buildInstance *build.Instance, cueInstance *cue.Instance) {
+			// A cue instance defines a single configuration based on a collection of underlying CUE files.
+			// cue.Build is designed to produce a single cue.Instance from n build.Instances
+			// doing so however, would loose the connection between a stack and the build instance that
+			// contains relevant path/file information related to the stack
+			// here we cue.Build one at a time so we can maintain a 1:1:1:1 between
+			// build.Instance, cue.Instance, cue.Value, and Stack
+
+			if cueInstance.Err != nil {
+				// parse errors will be exposed here
+				// fmt.Println(au.Cyan(binst.DisplayPath))
+				fmt.Println(cueInstance.Err, cueInstance.Err.Position())
+				wg.Done()
+				return
+			}
+			handler(buildInstance, cueInstance, cueInstance.Value())
+			wg.Done()
+		}(binsts[i], cueInstances[i])
+	}
+
+	wg.Wait()
 }
