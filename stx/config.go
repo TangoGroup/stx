@@ -10,6 +10,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
+	"github.com/TangoGroup/stx/stx/auth"
 	"github.com/logrusorgru/aurora"
 )
 
@@ -21,8 +22,8 @@ type Flags struct {
 
 const configCue = `package stx
 Auth: {
-	AwsVault: SourceProfile: string | *""
-	Ykman: Profile: string | *""
+	AwsVault: Enabled: bool | *false
+	Ykman: Enabled: bool | *false
 }
 Export: YmlPath: string | *"./yml"
 `
@@ -31,21 +32,15 @@ Export: YmlPath: string | *"./yml"
 type Config struct {
 	CueRoot     string
 	OsSeparator string
-	Auth        struct {
-		AwsVault struct {
-			SourceProfile string
-		}
-		Ykman struct {
-			Profile string
-		}
-	}
-	Export struct {
+	Auth        auth.Auth
+	Export      struct {
 		YmlPath string
 	}
+	SessionProvider *auth.SessionProvider
 }
 
 // LoadConfig looks for config.stx.cue to be colocated with cue.mod and unifies that with a built-in default config schema
-func LoadConfig() Config {
+func LoadConfig() *Config {
 
 	wd, _ := os.Getwd()
 	separator := string(os.PathSeparator)
@@ -97,13 +92,15 @@ func LoadConfig() Config {
 		os.Exit(1)
 	}
 
-	cfg := Config{CueRoot: path, OsSeparator: separator}
-
+	cfg := Config{CueRoot: path, OsSeparator: separator, Auth: auth.Auth{}}
+	// unmarshal the cue values into the config struct
 	decodeErr := configValue.Decode(&cfg)
 	if decodeErr != nil {
 		fmt.Println(decodeErr.Error())
 		os.Exit(1)
 	}
 
-	return cfg
+	cfg.SessionProvider = auth.NewSessionProvider(cfg.Auth)
+
+	return &cfg
 }

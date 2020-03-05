@@ -12,8 +12,8 @@ import (
 
 var au aurora.Aurora // TODO move au to Logger pacakge
 // config and flgs should be the only global vars
-var config stx.Config // holds settings in config.stx.cue files
-var flags stx.Flags   // holds command line flags
+var config *stx.Config // holds settings in config.stx.cue files
+var flags stx.Flags    // holds command line flags
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
