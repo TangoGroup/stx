@@ -22,14 +22,19 @@ var statusCmd = &cobra.Command{
 	Long:  `How long...?`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 
 			stacks := stx.GetStacks(cueValue, flags)
 
 			for stackName, stack := range stacks {
-				session := stx.GetSession(stack.Profile)
+				// get a session and cloudformation service client
+				session, sessionErr := config.SessionProvider.GetSession(stack.Profile)
+				if sessionErr != nil {
+					fmt.Println(au.Red(sessionErr))
+					os.Exit(1)
+				}
+
 				cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
 				// use a struct to pass a string, it's GC'd!

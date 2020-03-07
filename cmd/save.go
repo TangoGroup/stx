@@ -22,14 +22,18 @@ var saveCmd = &cobra.Command{
 	Short: "Saves stack outputs as importable libraries to cue.mod",
 	Long:  `Yada Yada Yada...`,
 	Run: func(cmd *cobra.Command, args []string) {
-		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue, flags)
 			if stacks != nil {
 				for stackName, stack := range stacks {
 					// get a session and cloudformation service client
-					session := stx.GetSession(stack.Profile)
+					session, sessionErr := config.SessionProvider.GetSession(stack.Profile)
+					if sessionErr != nil {
+						fmt.Println(au.Red(sessionErr))
+						os.Exit(1)
+					}
+
 					cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 					describeStacksInput := cloudformation.DescribeStacksInput{StackName: &stackName}
 					describeStacksOutput, describeStacksErr := cfn.DescribeStacks(&describeStacksInput)

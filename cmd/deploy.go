@@ -28,7 +28,6 @@ var deployCmd = &cobra.Command{
 	Short: "Deploys a stack by creating a changeset, previews expected changes, and optionally executes.",
 	Long:  `Yada yada yada.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		stx.EnsureVaultSession(config)
 		buildInstances := stx.GetBuildInstances(args, "cfn")
 		stx.Process(buildInstances, flags, func(buildInstance *build.Instance, cueInstance *cue.Instance, cueValue cue.Value) {
 			stacks := stx.GetStacks(cueValue, flags)
@@ -42,7 +41,12 @@ var deployCmd = &cobra.Command{
 					fmt.Print(au.Gray(11, "  Validating template..."))
 
 					// get a session and cloudformation service client
-					session := stx.GetSession(stack.Profile)
+					session, sessionErr := config.SessionProvider.GetSession(stack.Profile)
+					if sessionErr != nil {
+						fmt.Println(au.Red(sessionErr))
+						os.Exit(1)
+					}
+
 					cfn := cloudformation.New(session, aws.NewConfig().WithRegion(stack.Region))
 
 					// read template from disk
@@ -94,7 +98,8 @@ var deployCmd = &cobra.Command{
 					if _, err := os.Stat(secretsPath); !os.IsNotExist(err) {
 						fmt.Print(au.Gray(11, "  Decrypting secrets..."))
 
-						secrets, secretsErr := stx.DecryptSecrets(secretsPath, stack.SopsProfile)
+						sopsSession, _ := config.SessionProvider.GetSession(stack.SopsProfile)
+						secrets, secretsErr := stx.DecryptSecrets(secretsPath, sopsSession.Config.Credentials)
 
 						if secretsErr != nil {
 							fmt.Print(au.Red(secretsErr))

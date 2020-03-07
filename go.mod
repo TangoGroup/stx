@@ -11,7 +11,9 @@ require (
 	github.com/homeport/dyff v1.0.2
 	github.com/joho/godotenv v1.3.0
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/spf13/cobra v0.0.5
 	go.mozilla.org/sops/v3 v3.5.0
+	gopkg.in/ini.v1 v1.44.0
 )
