@@ -12,6 +12,9 @@ type Stack struct {
 	Name, Profile, SopsProfile, Region, Environment, RegionCode string
 	DependsOn                                                   []string
 	Tags                                                        map[string]string
+	Hooks                                                       struct {
+		PostSave []string
+	}
 }
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields

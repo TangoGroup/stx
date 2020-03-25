@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -98,8 +99,14 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	cuePackage := filepath.Base(cueOutPath)
 	result := "package " + cuePackage + "\n\n\"" + stack.Name + "\": {\n"
 	// convert cloudformation outputs into simple key:value pairs
+
 	for _, output := range describeStacksOutput.Stacks[0].Outputs {
-		result += fmt.Sprintf("\"%s\":\"%s\"\n", aws.StringValue(output.OutputKey), aws.StringValue(output.OutputValue))
+		k := aws.StringValue(output.OutputKey)
+		v := aws.StringValue(output.OutputValue)
+		result += fmt.Sprintf("\"%s\":\"%s\"\n", k, v)
+		if len(stack.Hooks.PostSave) > 0 {
+			stack.Hooks.PostSave[1] = strings.Replace(stack.Hooks.PostSave[1], "${"+k+"}", v, -1)
+		}
 	}
 	result += "}\n"
 
@@ -115,6 +122,23 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	writeErr := ioutil.WriteFile(fileName, cueOutput, 0766)
 	if writeErr != nil {
 		return writeErr
+	}
+
+	if len(stack.Hooks.PostSave) > 0 {
+		log.Infof("%s %s hook...\n", au.White("Executing"), au.Yellow("PostSave"))
+		log.Debug("Command:", stack.Hooks.PostSave)
+		cmd := exec.Command(stack.Hooks.PostSave[0], stack.Hooks.PostSave[1])
+
+		creds, _ := session.Config.Credentials.Get()
+
+		cmd.Env = append(cmd.Env, "AWS_ACCESS_KEY_ID="+creds.AccessKeyID, "AWS_SECRET_ACCESS_KEY="+creds.SecretAccessKey, "AWS_SESSION_TOKEN="+creds.SessionToken, "AWS_PAGER=")
+
+		postSaveOutput, postSaveErr := cmd.CombinedOutput()
+		if postSaveErr != nil {
+			log.Infof("%s\n", postSaveOutput)
+			return postSaveErr
+		}
+		log.Infof("%s\n", postSaveOutput)
 	}
 
 	return nil
