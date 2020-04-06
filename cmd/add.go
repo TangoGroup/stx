@@ -15,17 +15,15 @@ func init() {
 
 const scaffold = `package cfn
 
-Stacks: {
-	[StackName= =~"${STX::StackNameRegexPattern}"]: {
-		stack=Stacks[StackName]
-		Profile: "${STX::Profile}"
-		Environment: "${STX::Environment}"
-		RegionCode: "${STX::RegionCode}"
-		Template: {
-			Outputs: {}
-			Resources: {}
-		}
-	}	
+Stacks: [StackName= =~"${STX::StackNameRegexPattern}"]: {
+	stack = Stacks[StackName]
+	Profile:     "${STX::Profile}"
+	Environment: "${STX::Environment}"
+	RegionCode:  "${STX::RegionCode}"
+	Template: {
+		Outputs: {}
+		Resources: {}
+	}
 }`
 
 // addCmd represents the add command
