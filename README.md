@@ -17,8 +17,8 @@ If no args are present after <command>, stx will default to using `./...` as a w
 ### Commands
 
 - `print` behaves like `cue export -out yml` but highlights errors, and the folders being evaluated
-- `xpt` saves stacks to disk. See `config.stx.cue` for setting `Xpt: YmlPath:`
-- `dpl` creates a changeset, previews changes, and prompts to execute
+- `export` saves stacks to disk. See `config.stx.cue` for setting `Xpt: YmlPath:`
+- `deploy` creates a changeset, previews changes, and prompts to execute
 
 ### Roadmap
 
