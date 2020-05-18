@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -308,6 +309,13 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 				tagV = strings.Replace(buildInstance.Dir, buildInstance.Root, "", 1)
 			case "${STX::CueFiles}":
 				tagV = strings.Join(buildInstance.CUEFiles, ", ")
+			}
+			if tagK == "GitBranch" {
+				branchName, err := exec.Command("git", "branch", "--show-current").Output()
+				if err != nil {
+					log.Fatal(err)
+				}
+				tagV = strings.TrimSpace(string(branchName))
 			}
 			tags = append(tags, &cloudformation.Tag{Key: &tagK, Value: &tagV})
 		}
