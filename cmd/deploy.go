@@ -309,8 +309,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 				tagV = strings.Replace(buildInstance.Dir, buildInstance.Root, "", 1)
 			case "${STX::CueFiles}":
 				tagV = strings.Join(buildInstance.CUEFiles, ", ")
-			}
-			if tagK == "GitBranch" {
+			case "${STX::GitBranch}":
 				branchName, err := exec.Command("git", "branch", "--show-current").Output()
 				if err != nil {
 					log.Fatal(err)
