@@ -41,11 +41,10 @@ resources currently managed in the stack.
 			}
 
 			for stacksIterator.Next() {
-				stackValue := stacksIterator.Value()
-				var stack stx.Stack
-				decodeErr := stackValue.Decode(&stack)
-				if decodeErr != nil {
-					log.Error(decodeErr)
+				stack, stackErr := stacksIterator.Stack()
+
+				if stackErr != nil {
+					log.Error(stackErr)
 					continue
 				}
 

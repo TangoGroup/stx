@@ -98,13 +98,13 @@ first.
 			// we need to gather ALL the stacks first primarily to support dependencies
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
-				decodeErr := stackValue.Decode(&stack)
-				if decodeErr != nil {
+				stack, stackErr := stacksIterator.Stack()
+
+				if stackErr != nil {
 					if flags.DeployDeps {
-						log.Fatal(decodeErr)
+						log.Fatal(stackErr)
 					} else {
-						log.Error(decodeErr)
+						log.Error(stackErr)
 						continue
 					}
 				}
