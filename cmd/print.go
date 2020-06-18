@@ -49,12 +49,10 @@ Each stack will be converted to YAML then printed to stdout.`,
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
-				decodeErr := stackValue.Decode(&stack)
-				if decodeErr != nil {
-					if !flags.PrintHideErrors {
-						log.Error(decodeErr)
-					}
+				stack, stackErr := stacksIterator.Stack()
+
+				if stackErr != nil {
+					log.Error(stackErr)
 					continue
 				}
 

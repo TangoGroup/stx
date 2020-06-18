@@ -6,23 +6,29 @@ import (
 	"strings"
 
 	"cuelang.org/go/cue"
+	cueyaml "cuelang.org/go/pkg/encoding/yaml"
 	"github.com/TangoGroup/stx/logger"
+	yamlv3 "gopkg.in/yaml.v3"
 )
 
 // Stack represents the decoded value of stacks[stackname]
 type Stack struct {
-	Name, Profile, Region, Environment, RegionCode string
-	Overrides                                      map[string]struct {
-		SopsProfile string
-		Map         map[string]string
-	}
-	DependsOn []string
-	Tags      map[string]string
+	Name        string `yaml:"Name,omitempty"`
+	Profile     string `yaml:"Profile,omitempty"`
+	Region      string `yaml:"Region,omitempty"`
+	Environment string `yaml:"Environment,omitempty"`
+	RegionCode  string `yaml:"RegionCode,omitempty"`
+	Overrides   map[string]struct {
+		SopsProfile string            `yaml:"SopsProfile,omitempty"`
+		Map         map[string]string `yaml:"Map,omitempty"`
+	} `yaml:"Overrides,omitempty"`
+	DependsOn []string          `yaml:"DependsOn,omitempty"`
+	Tags      map[string]string `yaml:"Tags,omitempty"`
 }
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields
 type StacksIterator struct {
-	cueIter cue.Iterator
+	cueIter *cue.Iterator
 	flags   Flags
 	log     *logger.Logger
 }
@@ -30,12 +36,12 @@ type StacksIterator struct {
 // NewStacksIterator returns *StacksIterator
 func NewStacksIterator(cueInstance *cue.Instance, flags Flags, log *logger.Logger) (*StacksIterator, error) {
 	log.Debug("Getting stacks...")
-	stacks := cueInstance.Value().Lookup("Stacks")
-	if !stacks.Exists() {
+	stacks, stacksErr := cueInstance.Value().FieldByName("Stacks", false)
+	if stacksErr != nil {
 		return nil, errors.New("Stacks is undefined")
 	}
 
-	fields, fieldsErr := stacks.Fields()
+	fields, fieldsErr := stacks.Value.Fields(cue.Concrete(true))
 	if fieldsErr != nil {
 		return nil, fieldsErr
 	}
@@ -127,4 +133,18 @@ func (it *StacksIterator) Next() bool {
 // Value returns the value from the cue.Iterator
 func (it *StacksIterator) Value() cue.Value {
 	return it.cueIter.Value()
+}
+
+// Stack returns the Stack struct from the cue.Iterator
+func (it *StacksIterator) Stack() (Stack, error) {
+	yamlStr, _ := cueyaml.Marshal(it.cueIter.Value())
+	var stack Stack
+	decodeErr := yamlv3.Unmarshal([]byte(yamlStr), &stack)
+
+	return stack, decodeErr
+}
+
+// Label returns the Label from the cue.Iterator
+func (it *StacksIterator) Label() string {
+	return it.cueIter.Label()
 }

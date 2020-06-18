@@ -4,12 +4,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/pkg/encoding/yaml"
 	"github.com/TangoGroup/stx/stx"
 	"github.com/spf13/cobra"
+	"github.com/stuart-warren/yamlfmt"
 )
 
 // exportCmd represents the export command
@@ -48,10 +50,10 @@ infrastructure/
 
 			for stacksIterator.Next() {
 				stackValue := stacksIterator.Value()
-				var stack stx.Stack
-				decodeErr := stackValue.Decode(&stack)
-				if decodeErr != nil {
-					log.Error(decodeErr)
+				stack, stackErr := stacksIterator.Stack()
+
+				if stackErr != nil {
+					log.Error(stackErr)
 					continue
 				}
 				_, saveErr := saveStackAsYml(stack, buildInstance, stackValue)
@@ -60,7 +62,7 @@ infrastructure/
 				}
 			}
 		})
-	},
+	}, 
 }
 
 func saveStackAsYml(stack stx.Stack, buildInstance *build.Instance, stackValue cue.Value) (string, error) {
@@ -69,12 +71,20 @@ func saveStackAsYml(stack stx.Stack, buildInstance *build.Instance, stackValue c
 
 	fileName := dir + "/" + stack.Name + ".cfn.yml"
 	log.Infof("%s %s %s %s\n", au.White("Exported"), au.Magenta(stack.Name), au.White("⤏"), fileName)
-	template := stackValue.Lookup("Template")
+	template1, _ := stackValue.FieldByName("Template", false)
+
+	// template := stackValue.Lookup("Template")
+	template := template1.Value
 	yml, ymlErr := yaml.Marshal(template)
 	if ymlErr != nil {
 		return "", ymlErr
 	}
-	writeErr := ioutil.WriteFile(fileName, []byte(yml), 0644)
+	fmtYmlBytes, fmtYmlErr := yamlfmt.Format(strings.NewReader(yml))
+	if fmtYmlErr != nil {
+		return "", fmtYmlErr
+	}
+	// writeErr := ioutil.WriteFile(fileName, []byte(yml), 0644)
+	writeErr := ioutil.WriteFile(fileName, fmtYmlBytes, 0644)
 	if writeErr != nil {
 		return "", writeErr
 	}
