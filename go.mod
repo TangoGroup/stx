@@ -3,7 +3,7 @@ module github.com/TangoGroup/stx
 go 1.13
 
 require (
-	cuelang.org/go v0.2.1
+	cuelang.org/go v0.2.2
 	github.com/aws/aws-sdk-go v1.32.4
 	github.com/deckarep/golang-set v1.7.1
 	github.com/ghodss/yaml v1.0.0
