@@ -50,6 +50,7 @@ infrastructure/
 				stackValue := stacksIterator.Value()
 				var stack stx.Stack
 				decodeErr := stackValue.Decode(&stack)
+				log.Infof("%s\n%s\n", au.Gray(11, "--------------------------------------------------------------------------------"), au.Gray(11, "Stack x of x, x remaining."))
 				if decodeErr != nil {
 					log.Error(decodeErr)
 					continue
