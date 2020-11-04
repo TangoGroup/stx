@@ -22,8 +22,9 @@ type Stack struct {
 		SopsProfile string            `yaml:"SopsProfile,omitempty"`
 		Map         map[string]string `yaml:"Map,omitempty"`
 	} `yaml:"Overrides,omitempty"`
-	DependsOn []string          `yaml:"DependsOn,omitempty"`
-	Tags      map[string]string `yaml:"Tags,omitempty"`
+	DependsOn   []string          `yaml:"DependsOn,omitempty"`
+	Tags        map[string]string `yaml:"Tags,omitempty"`
+	TagsEnabled bool              `yaml:"TagsEnabled,omitempty"`
 }
 
 // StacksIterator is a wrapper around cue.Iterator that allows for filtering based on stack fields

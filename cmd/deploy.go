@@ -87,7 +87,7 @@ first.
 
 		availableStacks := make(map[string]deployArgs)
 		workingGraph := graph.NewGraph()
-		buildInstances := stx.GetBuildInstances(args, "cfn")
+		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 			stacksIterator, stacksIteratorErr := stx.NewStacksIterator(cueInstance, flags, log)
@@ -297,7 +297,7 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 	} // end stackParametersValue.Exists()
 
 	// handle Stack.Tags
-	if len(stack.Tags) > 0 {
+	if len(stack.Tags) > 0 && stack.TagsEnabled {
 		var tags []*cloudformation.Tag
 		for k, v := range stack.Tags {
 			tagK := k // reassign here to avoid issues with for-scope var
@@ -425,7 +425,8 @@ func deployStack(stack stx.Stack, buildInstance *build.Instance, stackValue cue.
 
 	diff(cfn, stack.Name, templateBody)
 
-	log.Infof("%s %s\n▶︎", au.BrightBlue("Execute change set?"), "Y to execute. Anything else to cancel.")
+	log.Infof("%s %s %s %s %s:%s:%s %s\n", au.Index(255-88, "Execute change set"), au.BrightBlue(changeSetName), au.Index(255-88, "on"), au.White("⤏"), au.Magenta(stack.Name), au.Green(stack.Profile), au.Cyan(stack.Region), au.Index(255-88, "?"))
+	log.Infof("%s\n%s", au.Gray(11, "Y to execute. Anything else to cancel."), au.Gray(11, "▶︎"))
 	var input string
 	fmt.Scanln(&input)
 

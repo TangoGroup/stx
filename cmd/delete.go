@@ -38,7 +38,7 @@ applied to the credentials being used! **
 		defer log.Flush()
 		stx.EnsureVaultSession(config)
 
-		buildInstances := stx.GetBuildInstances(args, "cfn")
+		buildInstances := stx.GetBuildInstances(args, config.PackageName)
 
 		stx.Process(buildInstances, flags, log, func(buildInstance *build.Instance, cueInstance *cue.Instance) {
 
@@ -54,8 +54,8 @@ applied to the credentials being used! **
 					log.Error(stackErr)
 					continue
 				}
-
-				log.Infof("%s %s?\nEnter the name of the stack to confirm.\n▶︎", au.Red("DELETE"), au.Magenta(stack.Name))
+				log.Infof("%s %s %s %s:%s %s\n", au.Red("You are about to DELETE"), au.Magenta(stack.Name), au.Red("from"), au.Green(stack.Profile), au.Cyan(stack.Region), au.Red("."))
+				log.Infof("%s\n%s\n%s", au.Index(255-88, "Are you sure you want to DELETE this stack?"), au.Gray(11, "Enter the name of the stack to confirm."), au.Gray(11, "▶︎"))
 				var input string
 				fmt.Scanln(&input)
 
@@ -91,11 +91,13 @@ applied to the credentials being used! **
 				cueOutPath = strings.Replace(buildInstance.Root+"/cue.mod/usr/cfn.out"+cueOutPath, "-", "", -1)
 				outputsFileName := cueOutPath + "/" + stack.Name + ".out.cue"
 
-				log.Infof("%s", au.Gray(11, "  Removing "+outputsFileName))
-
-				deleteOutputsErr := os.Remove(outputsFileName)
-				if deleteOutputsErr != nil {
-					log.Error(deleteOutputsErr)
+				if _, deleteOutputsErr := os.Stat(outputsFileName); deleteOutputsErr == nil {
+					deleteOutputsErr := os.Remove(outputsFileName)
+					if deleteOutputsErr != nil {
+						log.Error(deleteOutputsErr)
+					} else {
+						log.Infof("%s %s\n", au.White("Removed →"), au.Gray(11, outputsFileName))
+					}
 				} else {
 					log.Check()
 				}
@@ -103,11 +105,13 @@ applied to the credentials being used! **
 				dir := filepath.Clean(config.CueRoot + "/" + config.Cmd.Export.YmlPath + "/" + stack.Profile)
 				cfnFileName := dir + "/" + stack.Name + ".cfn.yml"
 
-				log.Infof("%s", au.Gray(11, "  Removing "+cfnFileName))
-
-				deleteCfnErr := os.Remove(cfnFileName)
-				if deleteCfnErr != nil {
-					log.Error(deleteCfnErr)
+				if _, deleteCfnErr := os.Stat(cfnFileName); deleteCfnErr == nil {
+					deleteCfnErr := os.Remove(cfnFileName)
+					if deleteCfnErr != nil {
+						log.Error(deleteCfnErr)
+					} else {
+						log.Infof("%s %s\n", au.White("Removed →"), au.Gray(11, cfnFileName))
+					}
 				} else {
 					log.Check()
 				}
