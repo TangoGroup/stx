@@ -22,6 +22,7 @@ type Flags struct {
 
 const configCue = `package stx
 Auth: {
+	AWS_SSO: bool | *false
 	AwsVault: SourceProfile: string | *""
 	Ykman: Profile: string | *""
 }
@@ -43,6 +44,7 @@ type Config struct {
 	OsSeparator string
 	PackageName string
 	Auth        struct {
+		AWS_SSO  bool
 		AwsVault struct {
 			SourceProfile string
 		}
