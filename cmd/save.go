@@ -116,7 +116,7 @@ func saveStackOutputs(buildInstance *build.Instance, stack stx.Stack) error {
 	if path != "" {
 		cueOutPath = strings.Replace(path, buildInstance.Root, "", 1)
 	}
-	cueOutPath = strings.Replace(buildInstance.Root+"/cue.mod/usr/cfn.out"+cueOutPath, "-", "", -1)
+	cueOutPath = buildInstance.Root + "/cue.mod/pkg/cfn.out" + strings.Replace(cueOutPath, "-", "", -1)
 	fileName := cueOutPath + "/" + stack.Name + ".out.cue"
 	log.Infof("%s %s %s %s\n", au.White("Saving"), au.Magenta(stack.Name), au.White("⤏"), fileName)
 
