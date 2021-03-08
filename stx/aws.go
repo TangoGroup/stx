@@ -16,6 +16,10 @@ import (
 
 // EnsureVaultSession is used to prompt for MFA if aws-vault session has expired
 func EnsureVaultSession(config *Config) {
+	if config.Auth.AWS_SSO {
+		return
+	}
+
 	au := aurora.NewAurora(true)
 	_, existingVault := os.LookupEnv("AWS_VAULT")
 	if existingVault {
